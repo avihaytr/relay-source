@@ -1,0 +1,13 @@
+Relay local development build — licensing/source availability
+
+Original source explicitly identified in LICENSING.md is under MPL-2.0.
+MPL-2.0.txt contains the unmodified license. Third-party code keeps its
+own terms; the main app includes ZXING-LICENSE.txt and ZXING-NOTICE.txt.
+
+This is a local development build, not an official binary release.
+Branding policy 1.0 is adopted effective 2026-11-18; see BRANDING.md.
+This does not establish third-party clearance. Before distributing
+an APK, provide the applicable covered source and an accessible source
+location corresponding to that exact build, and verify all asset terms
+and third-party notices. This notice does not claim those distribution
+requirements have already been met.

@@ -1,0 +1,70 @@
+{
+  "retrieved": "2026-11-14",
+  "notes": "Crate sources are exact locked crates.io versions; their archive checksums are in Cargo.lock. Copied legal texts are unmodified. This is not a full binary-license SBOM.",
+  "files": [
+    {
+      "path": "licenses/epaint_default_fonts-0.33.3/fonts/Hack-Regular.txt",
+      "crate": "epaint_default_fonts-0.33.3",
+      "upstream_file": "fonts/Hack-Regular.txt",
+      "sha256": "47c0cccbeec7e8614548cc485588b28149e7874188df5f41b36efebcee285c87"
+    },
+    {
+      "path": "licenses/epaint_default_fonts-0.33.3/fonts/OFL.txt",
+      "crate": "epaint_default_fonts-0.33.3",
+      "upstream_file": "fonts/OFL.txt",
+      "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
+    },
+    {
+      "path": "licenses/epaint_default_fonts-0.33.3/fonts/UFL.txt",
+      "crate": "epaint_default_fonts-0.33.3",
+      "upstream_file": "fonts/UFL.txt",
+      "sha256": "2f0015108d68627bd788d313f529c21ff4da2c2c42a5e1f3883acc83480f9002"
+    },
+    {
+      "path": "licenses/epaint_default_fonts-0.33.3/fonts/emoji-icon-font-mit-license.txt",
+      "crate": "epaint_default_fonts-0.33.3",
+      "upstream_file": "fonts/emoji-icon-font-mit-license.txt",
+      "sha256": "b9d2c1d909aa149996fd4c91dcb92b2362a04431640c1d200959da94caf8cde1"
+    },
+    {
+      "path": "licenses/ring-0.17.14/LICENSE",
+      "crate": "ring-0.17.14",
+      "upstream_file": "LICENSE",
+      "sha256": "b3d734001a94efff3579978d953391aa7115f877657d25eb54037a43875d078a"
+    },
+    {
+      "path": "licenses/ring-0.17.14/LICENSE-BoringSSL",
+      "crate": "ring-0.17.14",
+      "upstream_file": "LICENSE-BoringSSL",
+      "sha256": "005fc765ddc5115da796cca915baa9557abae13ff35e0a47c47affc56f6c414d"
+    },
+    {
+      "path": "licenses/ring-0.17.14/LICENSE-other-bits",
+      "crate": "ring-0.17.14",
+      "upstream_file": "LICENSE-other-bits",
+      "sha256": "f025ccfb7dfb6bdfedc75ca0f67acc69e6fb4998143d834f7c2f38a29989680f"
+    },
+    {
+      "path": "licenses/ring-0.17.14/src/polyfill/once_cell/LICENSE-APACHE",
+      "crate": "ring-0.17.14",
+      "upstream_file": "src/polyfill/once_cell/LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+    },
+    {
+      "path": "licenses/ring-0.17.14/src/polyfill/once_cell/LICENSE-MIT",
+      "crate": "ring-0.17.14",
+      "upstream_file": "src/polyfill/once_cell/LICENSE-MIT",
+      "sha256": "6ee2ed6c77710de911761acd5fc1ad1da00f476beb1a7ef27e78c2d1858deafc"
+    },
+    {
+      "path": "LICENSE",
+      "url": "https://www.mozilla.org/media/MPL/2.0/index.txt",
+      "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04"
+    },
+    {
+      "path": "android/lib/ZXING-NOTICE.txt",
+      "url": "https://raw.githubusercontent.com/zxing/zxing/zxing-3.5.3/NOTICE",
+      "sha256": "4db4b60aace29ec6c5c4f13ca9cac1930d3c0c54bcc67dceead0c10771120e66"
+    }
+  ]
+}

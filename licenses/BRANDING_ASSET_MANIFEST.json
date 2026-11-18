@@ -1,0 +1,63 @@
+{
+  "review_date": "2026-11-18",
+  "status": "adopted-owner-approved",
+  "mpl_scope": "excluded",
+  "files": [
+    {
+      "path": "assets/relay-icon.svg",
+      "sha256": "bbc0f4f9320b3d7ef2efb14e564f79cc8bc5b9a5f2fa7651d6e1ee46840e313e"
+    },
+    {
+      "path": "assets/relay-icon.png",
+      "sha256": "287fbe350b5c4f421457f3f500d3375661dd5f82af9844b0d2314d9fb1494b60"
+    },
+    {
+      "path": "android/res/drawable/ic_relay_vector.xml",
+      "sha256": "8f4e2738e13df8a8d3e1c0e15cf43ec3514075036095ad02fe8a5a3e33a5a43a"
+    },
+    {
+      "path": "android/res/mipmap-hdpi/ic_launcher.png",
+      "sha256": "f0b93daa4c71daee2ec6d7690d048e6b299949bb08c6d79d7246fde8c9955538"
+    },
+    {
+      "path": "android/res/mipmap-hdpi/ic_launcher_round.png",
+      "sha256": "f0b93daa4c71daee2ec6d7690d048e6b299949bb08c6d79d7246fde8c9955538"
+    },
+    {
+      "path": "android/res/mipmap-mdpi/ic_launcher.png",
+      "sha256": "82e812767a60c86efa528ba1403455d9e487a12ce3951650475e13161237ff30"
+    },
+    {
+      "path": "android/res/mipmap-mdpi/ic_launcher_round.png",
+      "sha256": "82e812767a60c86efa528ba1403455d9e487a12ce3951650475e13161237ff30"
+    },
+    {
+      "path": "android/res/mipmap-xhdpi/ic_launcher.png",
+      "sha256": "8fcce39dd5131ef3e82da3f456cfd07ee5d788073f2e88be5059f36969970d7f"
+    },
+    {
+      "path": "android/res/mipmap-xhdpi/ic_launcher_round.png",
+      "sha256": "8fcce39dd5131ef3e82da3f456cfd07ee5d788073f2e88be5059f36969970d7f"
+    },
+    {
+      "path": "android/res/mipmap-xxhdpi/ic_launcher.png",
+      "sha256": "702735305085563da8c0ceb9929fd2dc27ba6e67a3f7d5f3f5b1cee5a6b2a8ab"
+    },
+    {
+      "path": "android/res/mipmap-xxhdpi/ic_launcher_round.png",
+      "sha256": "702735305085563da8c0ceb9929fd2dc27ba6e67a3f7d5f3f5b1cee5a6b2a8ab"
+    },
+    {
+      "path": "android/res/mipmap-xxxhdpi/ic_launcher.png",
+      "sha256": "fc3eb8584a742e871685eadd828d4bf5a6a12e6e80a3bd6c8d22d75981fa0beb"
+    },
+    {
+      "path": "android/res/mipmap-xxxhdpi/ic_launcher_round.png",
+      "sha256": "fc3eb8584a742e871685eadd828d4bf5a6a12e6e80a3bd6c8d22d75981fa0beb"
+    }
+  ],
+  "policy_version": "1.0",
+  "effective_date": "2026-11-18",
+  "policy_file": "BRANDING.md",
+  "policy_sha256": "e840967f42dd8203c4a2bd288b820e073d0b1c6a6458b446f187048d36ab28f7"
+}

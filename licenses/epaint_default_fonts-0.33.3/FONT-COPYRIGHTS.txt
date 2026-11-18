@@ -1,0 +1,19 @@
+Embedded egui fonts: copyright records from the actual TTF name tables
+epaint_default_fonts 0.33.3; notices retain their original terms.
+
+Hack-Regular.ttf
+Version: Version 3.003;[3114f1256]-release; ttfautohint (v1.7) -l 6 -r 50 -G 200 -x 10 -H 181 -D latn -f latn -m "Hack-Regular-TA.txt" -w G -W -t -X ""
+Copyright (c) 2018 Source Foundry Authors / Copyright (c) 2003 by Bitstream, Inc. All Rights Reserved.
+
+NotoEmoji-Regular.ttf
+Version: Version 1.05 uh
+Copyright 2013 Google Inc. All Rights Reserved.
+
+Ubuntu-Light.ttf
+Version: 0.83
+Copyright 2011 Canonical Ltd.  Licensed under the Ubuntu Font Licence 1.0
+
+emoji-icon-font.ttf
+Version: Version 1.1
+
+emoji-icon-font: Copyright (c) 2014 John Slegers, as stated in the accompanying upstream MIT license.
