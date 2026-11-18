@@ -1,8 +1,28 @@
+<p align="center"><img src="assets/relay-icon.svg" width="76" alt="Relay app icon"></p>
+
 # Relay
+
+**Local screen sharing between Android and Linux.**
 
 Relay is an experimental Linux desktop app and Android companion for local screen mirroring. The desktop is written in Rust; the companion uses Android's screen-capture and media APIs.
 
 **Source preview, not an official binary release.** Approved original source is licensed under MPL-2.0. Separate [branding policy](BRANDING.md) version 1.0 is adopted effective 2026-11-18; its permissions do not expand MPL to branding assets or assert third-party clearance. This source candidate is prepared for review; no official binary release is announced. See [licensing scope](LICENSING.md).
+
+## Screenshots
+Real Relay captures from Fedora Linux and Android, using public-safe device labels.
+
+<table>
+  <tr>
+    <td align="center" valign="top"><strong>Linux · discovery</strong><br><img src="screenshots/linux-discovery.png" width="420" alt="Relay Linux wireless discovery panel with its original monitor and phone illustration"><br><sub>Full desktop window; QR and PIN visibly redacted.</sub></td>
+    <td align="center" valign="top"><strong>Android · nearby devices</strong><br><img src="screenshots/android-discovery.png" width="260" alt="Relay Android nearby-device discovery with a paired Relay Desktop and QR pairing entry"></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top"><strong>Linux · live phone mirroring</strong><br><img src="screenshots/linux-mirroring.png" width="300" alt="A real Android Relay session mirrored in the full Linux viewer with its phone frame and action toolbar"><br><sub>Full live viewer and native phone frame.</sub></td>
+    <td align="center" valign="top"><strong>Android · sharing controls</strong><br><img src="screenshots/android-session.png" width="260" alt="Relay sharing dashboard with connection status, device audio, mute and disconnect controls"></td>
+  </tr>
+</table>
+
+Pairing credentials are redacted. The captures retain the original app frames and use generic device names.
 
 ## Supported features
 
