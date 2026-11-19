@@ -56,8 +56,19 @@
       "sha256": "fc3eb8584a742e871685eadd828d4bf5a6a12e6e80a3bd6c8d22d75981fa0beb"
     }
   ],
-  "policy_version": "1.0",
-  "effective_date": "2026-11-18",
+  "policy_version": "1.1",
+  "effective_date": "2026-11-19",
   "policy_file": "BRANDING.md",
-  "policy_sha256": "e840967f42dd8203c4a2bd288b820e073d0b1c6a6458b446f187048d36ab28f7"
+  "policy_sha256": "9e81e4183d06b2482560365f2dc7984b57e813c200f8b3511a2b44e0ea237ba1",
+  "copyright_license_file": "ARTWORK_LICENSE.md",
+  "copyright_license_sha256": "74b0e14337ab0b7b1a01217a01ab1ae8aea212ef82cc118c088077489abc89ee",
+  "copyright_license": "MIT",
+  "copyright_license_version": "1.0",
+  "copyright_effective_date": "2026-11-19",
+  "prior_policy": {
+    "version": "1.0",
+    "effective_date": "2026-11-18",
+    "file": "licenses/BRANDING-v1.0.md",
+    "sha256": "e840967f42dd8203c4a2bd288b820e073d0b1c6a6458b446f187048d36ab28f7"
+  }
 }

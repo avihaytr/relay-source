@@ -1,13 +1,17 @@
-Relay local development build — licensing/source availability
+Relay 0.1.0-alpha.1 — source and licensing
 
-Original source explicitly identified in LICENSING.md is under MPL-2.0.
-MPL-2.0.txt contains the unmodified license. Third-party code keeps its
-own terms; the main app includes ZXING-LICENSE.txt and ZXING-NOTICE.txt.
+Approved original code and scoped test data remain MPL-2.0; see LICENSE
+and LICENSING.md. The thirteen icon files have separate MIT/Expat
+copyright permission in ARTWORK_LICENSE.md (v1.0, 2026-11-19).
+BRANDING.md v1.1 separately governs permitted product identity to the
+extent of applicable rights; it adds no MIT/MPL/GPL copyright restriction.
+ZXing and all other third-party terms/notices remain applicable.
 
-This is a local development build, not an official binary release.
-Branding policy 1.0 is adopted effective 2026-11-18; see BRANDING.md.
-This does not establish third-party clearance. Before distributing
-an APK, provide the applicable covered source and an accessible source
-location corresponding to that exact build, and verify all asset terms
-and third-party notices. This notice does not claim those distribution
-requirements have already been met.
+Matching source and build instructions are supplied in
+relay-0.1.0-alpha.1-source.tar.xz, with Cargo.lock and the separate
+locked vendor/source materials listed in the release manifest.
+Project source location: https://github.com/avihaytr/relay-source
+The initial public commit alone does not include these packaging changes.
+Only an explicitly authorized source update/release makes this candidate
+available publicly; licensing adoption itself is not publication approval.
+Private history, signing keys and passwords are intentionally excluded.

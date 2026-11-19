@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 mod desktop;
+mod paths;
 mod companion;
 mod view;
 mod mirror;
@@ -18,7 +19,7 @@ const TEXT: Color32 = Color32::from_rgb(30,43,68);
 const GREEN: Color32 = Color32::from_rgb(52,113,246);
 #[derive(Clone,Debug)] struct Device { serial:String, name:String, state:String, wifi:bool }
 #[derive(Clone,Serialize,Deserialize)] struct Settings { #[serde(default="default_device_name")] device_name:String,#[serde(default="default_wireless_profile")] wireless_profile:u32,size:u32, fps:u32, bitrate:u32, audio:bool, control:bool, fullscreen:bool, hardware:bool, folder:String }
-impl Default for Settings { fn default()->Self { Self {device_name:default_device_name(),wireless_profile:2,size:1920,fps:60,bitrate:8,audio:true,control:true,fullscreen:false,hardware:true,folder:format!("{}/captures",env!("CARGO_MANIFEST_DIR"))} } }
+impl Default for Settings { fn default()->Self { Self {device_name:default_device_name(),wireless_profile:2,size:1920,fps:60,bitrate:8,audio:true,control:true,fullscreen:false,hardware:true,folder:paths::captures_dir().to_string_lossy().into_owned()} } }
 fn default_wireless_profile()->u32{2}
 fn default_device_name()->String{profile::random_name()}
 enum Event { Scan(Result<Vec<Device>,String>), Message(String) }
@@ -49,8 +50,7 @@ fn new(cc:&desktop::CreationContext<'_>,screenshot:Option<PathBuf>)->Self {
 }
 fn apply_wireless_settings(&mut self){
  self.settings.device_name=profile::device_name(&self.settings.device_name);self.settings.wireless_profile=self.settings.wireless_profile.min(2);
- let path=PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"),"/settings.json"));
- let result=(||->Result<(),String>{let settings=serde_json::to_string(&self.settings).map_err(|e|e.to_string())?;let bytes=serde_json::to_vec(&serde_json::json!({"settings":settings})).map_err(|e|e.to_string())?;let temporary=path.with_extension("json.new");std::fs::write(&temporary,bytes).map_err(|e|e.to_string())?;std::fs::rename(temporary,path).map_err(|e|e.to_string())})();
+ let result=(||->Result<(),String>{let settings=serde_json::to_string(&self.settings).map_err(|e|e.to_string())?;let bytes=serde_json::to_vec(&serde_json::json!({"settings":settings})).map_err(|e|e.to_string())?;paths::save_settings(&bytes).map_err(|e|e.to_string())})();
  if let Err(error)=result{self.status=format!("Could not save settings: {error}");return;}
  self.companion=None;self.easy=true;self.status="Device name and Wi-Fi quality saved".into();
 }

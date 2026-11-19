@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: MPL-2.0
 set -euo pipefail
 cd "$(dirname "$0")"
+mode="${1:---development}"
+case "$mode" in --development|--unsigned) ;; *) echo "Usage: bash android/build.sh [--development|--unsigned]" >&2; exit 2;; esac
 sdk="${ANDROID_HOME:-$HOME/Android/Sdk}"
 tools="$sdk/build-tools/35.0.0"
 platform="$sdk/platforms/android-35/android.jar"
@@ -18,6 +20,10 @@ with ZipFile('build/unsigned.apk', 'a') as z:
     z.write('build/dex/classes.dex', 'classes.dex')
 PY
 "$tools/zipalign" -f 4 build/unsigned.apk build/aligned.apk
+if [ "$mode" = "--unsigned" ]; then
+  echo "Built android/build/aligned.apk (unsigned; not installable)"
+  exit 0
+fi
 if [ ! -f relay.keystore ]; then
   keytool -genkeypair -keystore relay.keystore -storepass relay-local-build -keypass relay-local-build -alias relay -keyalg RSA -validity 10000 -dname 'CN=Relay Local Build'
   chmod 600 relay.keystore

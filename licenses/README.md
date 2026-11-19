@@ -16,6 +16,8 @@ Verified origins:
 
 `python3 tools/check_licenses.py` checks the recorded copies; Android builds also check the packaged copies against their canonical source files. No internet connection is required for these checks. The hashes establish local copy consistency, not a substitute for provenance/rights review.
 
-This directory repairs known font/crypto notice omissions. It is **not** a full notices bundle or corresponding-source offer for a downloadable Linux binary. All included Rust/native components, actual licensing choices and their notices/source obligations still need a per-release review. See `THIRD_PARTY_NOTICES.md`.
+This directory preserves upstream font, crypto, Cargo and Rust standard-library/toolchain notices. It is one part of the release materials, not a standalone corresponding-source offer or a guarantee of legal clearance. Use the per-release manifest and matching Relay/vendor/native source archives for the actual distribution snapshot. See `THIRD_PARTY_NOTICES.md` and `packaging/DISTRIBUTION.md`.
 
 `BRANDING_ASSET_MANIFEST.json` is Relay asset hash metadata, not an upstream license; the applicable adopted branding permissions are in root `BRANDING.md`. `RELAY-SOURCE.txt` is the local-build source-availability notice; it does not claim public binary obligations are already satisfied.
+
+Rust runtime/library notices from Fedora rust/rust-std-static 1.99.0-1.fc43 are preserved under rust-toolchain-1.99.0/. Their installed paths and hashes are recorded in PROVENANCE.json; these upstream texts are not Relay MPL-covered source. Artwork copyright permission is separately in ARTWORK_LICENSE.md (MIT/Expat v1.0), and product identity in BRANDING.md v1.1, adopted effective 2026-11-19.

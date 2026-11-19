@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Relay
+Comment=Share screens between Android and Linux
+Exec=relay --connect-phone
+Icon=relay
+Terminal=false
+Categories=Network;Utility;
+StartupWMClass=relay

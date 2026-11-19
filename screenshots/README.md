@@ -1,0 +1,7 @@
+# Reviewed real application screenshots
+
+Captured with explicit owner permission during local preview qualification on Fedora and the Samsung. These are real running Relay applications, not mockups. Public-safe device labels were set through actual settings. A neutral locally drawn window was placed behind the Linux mirror so transparency could not expose unrelated desktop content.
+
+Following owner feedback, full desktop/mobile frames and nonsensitive status/navigation bars are retained. Edits are proportional resizing, PNG metadata removal/compression, and clearly labelled opaque redaction of the desktop QR/PIN. All credential pixels are covered; no blur-only or partially decodable QR is used. No product controls or features were invented, and no images from another application were borrowed. Private raw captures remain outside source/release archives.
+
+The captures show Relay's approved implementation and separately licensed branding; BRANDING.md permits truthful documentation use. This record asserts no exclusive copyright or independently verified third-party clearance. No unrelated app content, personal device label, private notification or exposed network endpoint is included in the reviewed outputs. The owner-approved screenshot/README gallery was published in public commit 0553baa7af0b5b8394c5836ca6f678367dd750aa. This record does not authorize further commits or binary publication.

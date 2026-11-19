@@ -2,13 +2,14 @@
 
 # Relay
 
-**Local screen sharing between Android and Linux.**
+**Your phone and desktop, on the same screen.**
 
 Relay is an experimental Linux desktop app and Android companion for local screen mirroring. The desktop is written in Rust; the companion uses Android's screen-capture and media APIs.
 
-**Source preview, not an official binary release.** Approved original source is licensed under MPL-2.0. Separate [branding policy](BRANDING.md) version 1.0 is adopted effective 2026-11-18; its permissions do not expand MPL to branding assets or assert third-party clearance. This source candidate is prepared for review; no official binary release is announced. See [licensing scope](LICENSING.md).
+**Source preview, not an official binary release.** Approved original source is licensed under MPL-2.0. Original code remains MPL-2.0. The 13 identified icon files have separate [MIT/Expat copyright permission](ARTWORK_LICENSE.md), version 1.0, and [product-identity policy](BRANDING.md) v1.1, both adopted effective 2026-11-19. These grants do not assert exclusive ownership or third-party clearance. This source candidate is prepared for review; no official binary release is announced. See [licensing scope](LICENSING.md).
 
 ## Screenshots
+
 Real Relay captures from Fedora Linux and Android, using public-safe device labels.
 
 <table>
@@ -22,7 +23,11 @@ Real Relay captures from Fedora Linux and Android, using public-safe device labe
   </tr>
 </table>
 
-Pairing credentials are redacted. The captures retain the original app frames and use generic device names.
+Full frames and nonsensitive status bars are retained following owner review. Desktop QR/PIN values are visibly redacted. Images are genuine application captures, not mockups; no QR/PIN, personal IP, private device name, notification or unrelated screen content is included. Screenshot review details: [screenshots/README.md](screenshots/README.md).
+
+## Preview status
+
+`v0.1.0-alpha.1` is being qualified locally for **Fedora 43 x86_64 (GNOME/Wayland)** and Android. No downloadable release is announced by this source preparation. [Candidate installation](packaging/INSTALL.md), [signing process](packaging/ANDROID_SIGNING.md), and [distribution/source obligations](packaging/DISTRIBUTION.md) are separate from the existing source-only release. Quality profiles are targets, not guarantees of displayed FPS.
 
 ## Supported features
 
@@ -69,7 +74,7 @@ cargo test --locked
 ./target/release/relay --connect-phone
 ```
 
-Keep this checkout writable: settings and default captures currently live under the compile-time source directory. This is a source-build workflow; installed-package data paths still need work.
+Settings are stored under `$XDG_CONFIG_HOME/relay` (default `$HOME/.config/relay`); captures default to `$XDG_DATA_HOME/relay/captures` (default `$HOME/.local/share/relay/captures`). Builds no longer write settings into the source/install directory. Existing saved trust keeps its established location. See [candidate installation](packaging/INSTALL.md).
 
 ## Android build
 

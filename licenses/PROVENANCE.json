@@ -65,6 +65,71 @@
       "path": "android/lib/ZXING-NOTICE.txt",
       "url": "https://raw.githubusercontent.com/zxing/zxing/zxing-3.5.3/NOTICE",
       "sha256": "4db4b60aace29ec6c5c4f13ca9cac1930d3c0c54bcc67dceead0c10771120e66"
+    },
+    {
+      "path": "licenses/GPL-3.0.txt",
+      "origin": "https://github.com/FFmpeg/FFmpeg/blob/n7.1.5/COPYING.GPLv3",
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+    },
+    {
+      "path": "licenses/GPL-2.0.txt",
+      "origin": "https://github.com/FFmpeg/FFmpeg/blob/n7.1.5/COPYING.GPLv2",
+      "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
+    },
+    {
+      "path": "licenses/LGPL-2.1.txt",
+      "origin": "https://github.com/FFmpeg/FFmpeg/blob/n7.1.5/COPYING.LGPLv2.1",
+      "sha256": "246041b6ecf9bc32d718a62c57877c78b5eb397b6467e74ed7ae2626ab189c30"
+    },
+    {
+      "path": "licenses/rust-toolchain-1.99.0/COPYRIGHT-library.html",
+      "system_package": "rust / rust-std-static 1.99.0-1.fc43",
+      "upstream_file": "/usr/share/doc/rust/COPYRIGHT-library.html",
+      "sha256": "e865f7bd5018634399d00f92f049ccfa84a4c1d60c2483d1a81eb63a5038d659",
+      "verified_date": "2026-11-19"
+    },
+    {
+      "path": "licenses/rust-toolchain-1.99.0/LICENSE-MIT",
+      "system_package": "rust / rust-std-static 1.99.0-1.fc43",
+      "upstream_file": "/usr/share/licenses/rust/LICENSE-MIT",
+      "sha256": "b71bd43a069ca0641a9ecfe585ca7b3c53b5cc1608f8b68321168698e28b5ea1",
+      "verified_date": "2026-11-19"
+    },
+    {
+      "path": "licenses/rust-toolchain-1.99.0/LICENSE-APACHE",
+      "system_package": "rust / rust-std-static 1.99.0-1.fc43",
+      "upstream_file": "/usr/share/licenses/rust/LICENSE-APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "verified_date": "2026-11-19"
+    },
+    {
+      "path": "licenses/rust-toolchain-1.99.0/COPYRIGHT",
+      "system_package": "rust / rust-std-static 1.99.0-1.fc43",
+      "upstream_file": "/usr/share/licenses/rust/COPYRIGHT",
+      "sha256": "172020dbfd5b53a226dfde77616190a48dcff519b0bc0e6deb91a8450782c4af",
+      "verified_date": "2026-11-19"
+    },
+    {
+      "path": "licenses/rust-toolchain-1.99.0/Unicode-3.0.txt",
+      "system_package": "rust / rust-std-static 1.99.0-1.fc43",
+      "upstream_file": "/usr/share/doc/rust/licenses/Unicode-3.0.txt",
+      "sha256": "f5062c9a188d81dfe66b56db4182dcf9e4b17c0d9b0d311a8e20b3a1b075c443",
+      "verified_date": "2026-11-19"
+    },
+    {
+      "path": "licenses/rust-toolchain-1.99.0/LLVM-exception.txt",
+      "system_package": "rust / rust-std-static 1.99.0-1.fc43",
+      "upstream_file": "/usr/share/doc/rust/licenses/LLVM-exception.txt",
+      "sha256": "e34c58338bd89d43e709e226610d8f32b3e3c47f4ad9a99a8dc1d4ac7842488e",
+      "verified_date": "2026-11-19"
+    },
+    {
+      "path": "licenses/rust-toolchain-1.99.0/NCSA.txt",
+      "system_package": "rust / rust-std-static 1.99.0-1.fc43",
+      "upstream_file": "/usr/share/doc/rust/licenses/NCSA.txt",
+      "sha256": "39cb0234065c92b9e6cee3830cbb52b1aa289aa8fe9ba2e66730fec5cf05c630",
+      "verified_date": "2026-11-19"
     }
-  ]
+  ],
+  "latest_update": "2026-11-19"
 }
