@@ -6,7 +6,7 @@
 
 Relay is an experimental Linux desktop app and Android companion for local screen mirroring. The desktop is written in Rust; the companion uses Android's screen-capture and media APIs.
 
-**Source preview, not an official binary release.** Approved original source is licensed under MPL-2.0. Original code remains MPL-2.0. The 13 identified icon files have separate [MIT/Expat copyright permission](ARTWORK_LICENSE.md), version 1.0, and [product-identity policy](BRANDING.md) v1.1, both adopted effective 2026-11-19. These grants do not assert exclusive ownership or third-party clearance. This source candidate is prepared for review; no official binary release is announced. See [licensing scope](LICENSING.md).
+**First public pre-release: [v0.1.0-alpha.1](https://github.com/avihaytr/relay-source/releases/tag/v0.1.0-alpha.1).** It is experimental, not stable. Original approved code is licensed under MPL-2.0. The 13 identified icon files have separate [MIT/Expat copyright permission](ARTWORK_LICENSE.md), version 1.0, and [product-identity policy](BRANDING.md) v1.1, both adopted effective 2026-11-19. These grants do not assert exclusive ownership or third-party clearance. See [licensing scope](LICENSING.md).
 
 ## Screenshots
 
@@ -27,7 +27,7 @@ Full frames and nonsensitive status bars are retained following owner review. De
 
 ## Preview status
 
-`v0.1.0-alpha.1` is being qualified locally for **Fedora 43 x86_64 (GNOME/Wayland)** and Android. No downloadable release is announced by this source preparation. [Candidate installation](packaging/INSTALL.md), [signing process](packaging/ANDROID_SIGNING.md), and [distribution/source obligations](packaging/DISTRIBUTION.md) are separate from the existing source-only release. Quality profiles are targets, not guarantees of displayed FPS.
+`v0.1.0-alpha.1` is available as a public **pre-release**. Download the [signed Android APK](https://github.com/avihaytr/relay-source/releases/download/v0.1.0-alpha.1/relay-0.1.0-alpha.1-android.apk) or the [unsigned Fedora 43 x86_64 RPM](https://github.com/avihaytr/relay-source/releases/download/v0.1.0-alpha.1/relay-0.1.0.alpha.1-1.fc43.x86_64.rpm). See the [release page](https://github.com/avihaytr/relay-source/releases/tag/v0.1.0-alpha.1), [installation instructions](https://github.com/avihaytr/relay-source/releases/download/v0.1.0-alpha.1/INSTALL.md), and [SHA256SUMS](https://github.com/avihaytr/relay-source/releases/download/v0.1.0-alpha.1/SHA256SUMS). Fedora 43 x86_64 with GNOME/Wayland is the only validated Linux target; other configurations have limited testing. Quality profiles are targets, not guarantees of displayed FPS.
 
 ## Supported features
 
@@ -138,6 +138,6 @@ The **LGPL FFmpeg / OpenH264 / VA-API prototype is experimental and not producti
 
 The standard MPL-2.0 license applies to the approved source and explicitly identified test data, without an Exhibit B incompatibility restriction. **It does not blanket-license this tree's icons, fonts, dependencies or third-party legal texts.** Preserve [LICENSE](LICENSE), [exact scope](LICENSING.md), [third-party notices](THIRD_PARTY_NOTICES.md), and the [fixture provenance](tests/fixtures/README.md).
 
-The current Linux build links to a **GPLv3-or-later-enabled FFmpeg** stack and loads **GPL x264** through GStreamer. An MPL source license does not make that binary LGPL-only or remove combined-work/GPL obligations. A subprocess boundary is not an automatic exemption. Publishing Relay source with dependency instructions is different from distributing those compiled components. Official Linux/APK downloads require separate dependency/source-delivery, notice, signing and branding review; no such release is announced here.
+The current Linux build links to a **GPLv3-or-later-enabled FFmpeg** stack and loads **GPL x264** through GStreamer. An MPL source license does not make that binary LGPL-only or remove combined-work/GPL obligations. A subprocess boundary is not an automatic exemption. Publishing Relay source with dependency instructions is different from distributing those compiled components. The v0.1.0-alpha.1 release provides matching source, dependency materials, notices and checksums; the Fedora RPM is unsigned. See its [release notes](https://github.com/avihaytr/relay-source/releases/tag/v0.1.0-alpha.1) for scope and limitations.
 
 Relay is independent of Apowersoft, ApowerMirror and LetsView. Functional inspiration does not establish copying, and this statement is not trademark or legal clearance. See [contributing](CONTRIBUTING.md); report sensitive issues using [SECURITY.md](SECURITY.md).
