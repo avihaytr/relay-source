@@ -20,8 +20,9 @@ pub fn window_size(source: [usize; 2], rotation: u8, monitor: Vec2) -> Vec2 {
 }
 
 pub fn sync_window(app: &mut Relay, ctx: &Context) {
-    let geometry = app.last_image.as_ref().map(|frame| (frame.size, app.mirror_rotation));
-    if geometry.is_some() && !app.mirror_mode {
+    let usb = app.usb_source();
+    let source = usb.or_else(|| app.last_image.as_ref().map(|frame| frame.size));
+    if source.is_some() && !app.mirror_mode {
         app.menu_size = ctx.input(|i| i.viewport().inner_rect.map(|r| r.size())).unwrap_or(vec2(1240., 850.));
         app.menu_maximized = ctx.input(|i| i.viewport().maximized.unwrap_or(false));
         app.mirror_mode = true;
@@ -30,21 +31,26 @@ pub fn sync_window(app: &mut Relay, ctx: &Context) {
         app.mirror_geometry = None;
         app.help = false;
         app.dialog = false;
-        app.fullscreen = false;
-        ctx.send_viewport_cmd(ViewportCommand::Fullscreen(false));
+        app.fullscreen = usb.is_some() && app.settings.fullscreen;
+        ctx.send_viewport_cmd(ViewportCommand::Fullscreen(app.fullscreen));
         ctx.send_viewport_cmd(ViewportCommand::Maximized(false));
         ctx.send_viewport_cmd(ViewportCommand::Decorations(false));
         ctx.send_viewport_cmd(ViewportCommand::MinInnerSize(vec2(260., 360.)));
-        let peer=app.companion.as_ref().map(|c|c.peer_name.lock().unwrap().clone()).unwrap_or_else(||"Phone".into());ctx.send_viewport_cmd(ViewportCommand::Title(format!("Relay · {peer}")));
+        let peer = if usb.is_some() {
+            app.chosen().map(|device| device.name.clone()).unwrap_or_else(|| "Android".into())
+        } else {
+            app.companion.as_ref().map(|c| c.peer_name.lock().unwrap().clone()).unwrap_or_else(|| "Phone".into())
+        };
+        ctx.send_viewport_cmd(ViewportCommand::Title(format!("Relay · {peer}")));
         ctx.send_viewport_cmd(ViewportCommand::Focus);
     }
-    if let Some(frame) = &app.last_image {
-        let current = (frame.size, app.mirror_rotation);
+    if let Some(source) = source {
+        let current = (source, if usb.is_some() { 0 } else { app.mirror_rotation });
         if app.mirror_geometry != Some(current) {
             app.mirror_geometry = Some(current);
             if !app.fullscreen {
                 let monitor = ctx.input(|i| i.viewport().monitor_size).unwrap_or(vec2(1920., 1080.));
-                ctx.send_viewport_cmd(ViewportCommand::InnerSize(window_size(frame.size, app.mirror_rotation, monitor)));
+                ctx.send_viewport_cmd(ViewportCommand::InnerSize(window_size(current.0, current.1, monitor)));
             }
         }
     } else if app.mirror_mode {
@@ -54,6 +60,9 @@ pub fn sync_window(app: &mut Relay, ctx: &Context) {
         app.mirror_rotation = 0;
         app.fullscreen = false;
         app.page = 0;
+        if std::mem::take(&mut app.mirror_pinned) {
+            ctx.send_viewport_cmd(ViewportCommand::WindowLevel(WindowLevel::Normal));
+        }
         ctx.send_viewport_cmd(ViewportCommand::Fullscreen(false));
         ctx.send_viewport_cmd(ViewportCommand::Decorations(true));
         ctx.send_viewport_cmd(ViewportCommand::MinInnerSize(vec2(1080., 800.)));
@@ -75,6 +84,43 @@ fn header_button(ui: &mut Ui, rect: Rect, close: bool) -> bool {
         ui.painter().line_segment([center+vec2(-4.,4.),center+vec2(4.,-4.)],stroke);
     } else {ui.painter().line_segment([center-vec2(4.,0.),center+vec2(4.,0.)],stroke);}
     response.on_hover_text(if close {"Stop mirroring and return to the menu"} else {"Minimize mirror"}).clicked()
+}
+
+fn pin_button(ui: &mut Ui, rect: Rect, pinned: &mut bool) {
+    let ctx = ui.ctx().clone();
+    #[cfg(target_os = "linux")]
+    let supported = ctx.data(|data| data.get_temp::<u32>(Id::new(usb_mirror::HOST_WINDOW)).is_some());
+    #[cfg(not(target_os = "linux"))]
+    let supported = true;
+    let label = if *pinned { "Unpin from above other windows" } else { "Pin above other windows" };
+    let response = ui.put(rect, Button::new("").fill(Color32::TRANSPARENT)
+        .stroke(Stroke::NONE).corner_radius(6.).sense(if supported { Sense::click() } else { Sense::hover() }));
+    response.widget_info(|| WidgetInfo::selected(WidgetType::Button, supported, *pinned, label));
+    if response.clicked() {
+        *pinned = !*pinned;
+        ctx.send_viewport_cmd(ViewportCommand::WindowLevel(if *pinned {
+            WindowLevel::AlwaysOnTop
+        } else {
+            WindowLevel::Normal
+        }));
+    }
+    if *pinned || response.hovered() || response.has_focus() {
+        ui.painter().rect_filled(rect, 6., Color32::from_rgb(234, 241, 255));
+    }
+    let color = if *pinned { BLUE } else if supported {
+        Color32::from_rgb(81, 91, 108)
+    } else {
+        Color32::from_gray(161)
+    };
+    let origin = rect.center();
+    let at = |x, y| origin + vec2(x, y);
+    let stroke = Stroke::new(1.5_f32, color);
+    ui.painter().add(Shape::closed_line(vec![
+        at(-5., -7.), at(5., -7.), at(3., -4.), at(3., -1.),
+        at(6., 2.), at(-6., 2.), at(-3., -1.), at(-3., -4.),
+    ], stroke));
+    ui.painter().line_segment([at(0., 2.), at(0., 8.)], stroke);
+    response.on_hover_text(if supported { label } else { "Pinning requires X11 or XWayland" });
 }
 
 fn tool(ui: &mut Ui, rect: Rect, index: usize, active: bool) -> bool {
@@ -118,23 +164,32 @@ fn paint_screen(ui:&Ui,texture:TextureId,screen:Rect,rotation:u8) {
 pub fn render(app: &mut Relay, ctx: &Context) {
     CentralPanel::default().frame(Frame::NONE.fill(Color32::TRANSPARENT)).show(ctx,|ui| {
         let all = ui.max_rect();
-        let Some(texture) = &app.texture else {return};
-        let source = texture.size_vec2();
-        let effective = if app.mirror_rotation%2==0 {source} else {vec2(source.y,source.x)};
+        let usb = app.usb_source();
+        let (source, rotation) = if let Some([width, height]) = usb {
+            (vec2(width as f32, height as f32), 0)
+        } else if let Some(texture) = &app.texture {
+            (texture.size_vec2(), app.mirror_rotation)
+        } else {
+            return;
+        };
+        let effective = if rotation % 2 == 0 { source } else { vec2(source.y, source.x) };
         let landscape = effective.x>effective.y;
         let header = Rect::from_min_size(all.min+vec2(8.,0.),vec2(all.width()-16.,30.));
         ui.painter().rect_filled(header,8.,Color32::from_rgb(248,250,254));
         ui.painter().text(header.min+vec2(12.,6.),Align2::LEFT_TOP,"Relay",FontId::proportional(12.),Color32::from_rgb(79,91,111));
-        let drag=Rect::from_min_max(header.min,pos2(header.right()-66.,header.bottom()));
+        let drag=Rect::from_min_max(header.min,pos2(header.right()-94.,header.bottom()));
         let drag=ui.interact(drag,Id::new("phone-drag-handle"),Sense::click_and_drag());
         if drag.drag_started(){ctx.send_viewport_cmd(ViewportCommand::StartDrag);}
         if drag.double_clicked(){app.fullscreen=!app.fullscreen;ctx.send_viewport_cmd(ViewportCommand::Fullscreen(app.fullscreen));}
+        pin_button(ui, Rect::from_min_size(pos2(header.right()-91., header.top()+2.), vec2(28., 25.)), &mut app.mirror_pinned);
         if header_button(ui,Rect::from_min_size(pos2(header.right()-61.,header.top()+2.),vec2(28.,25.)),false){ctx.send_viewport_cmd(ViewportCommand::Minimized(true));}
         let stop=header_button(ui,Rect::from_min_size(pos2(header.right()-31.,header.top()+2.),vec2(28.,25.)),true);
+        let tools: &[usize] = if usb.is_some() { &[0, 1, 4] } else { &[0, 1, 2, 3, 4] };
+        let toolbar_length = 50. * tools.len() as f32 + 10.;
         let (area, toolbar) = if landscape {
-            (Rect::from_min_max(all.min+vec2(8.,98.),all.max-vec2(8.,8.)),Rect::from_center_size(pos2(all.center().x,62.),vec2(260.,54.)))
+            (Rect::from_min_max(all.min+vec2(8.,98.),all.max-vec2(8.,8.)),Rect::from_center_size(pos2(all.center().x,62.),vec2(toolbar_length,54.)))
         } else {
-            (Rect::from_min_max(all.min+vec2(8.,36.),all.max-vec2(72.,8.)),Rect::from_min_size(pos2(all.right()-62.,70.),vec2(54.,260.)))
+            (Rect::from_min_max(all.min+vec2(8.,36.),all.max-vec2(72.,8.)),Rect::from_min_size(pos2(all.right()-62.,70.),vec2(54.,toolbar_length)))
         };
         let factor=((area.width()-18.)/effective.x).min((area.height()-18.)/effective.y).max(0.01);
         let screen=Rect::from_center_size(area.center(),effective*factor);
@@ -143,16 +198,24 @@ pub fn render(app: &mut Relay, ctx: &Context) {
         ui.painter().rect_filled(bezel.translate(vec2(0.,2.)).expand(1.),radius,Color32::from_black_alpha(32));
         ui.painter().rect(bezel,radius,BEZEL,Stroke::new(1.5_f32,OUTLINE),StrokeKind::Inside);
         ui.painter().rect_stroke(bezel.shrink(3.),radius-3.,Stroke::new(0.7_f32,Color32::from_gray(55)),StrokeKind::Inside);
-        paint_screen(ui,texture.id(),screen,app.mirror_rotation);
+        if usb.is_some() {
+            #[cfg(target_os = "linux")]
+            if let Some(usb) = &mut app.usb_mirror {
+                usb.position(screen, ctx.pixels_per_point());
+            }
+        } else if let Some(texture) = &app.texture {
+            paint_screen(ui, texture.id(), screen, rotation);
+        }
         ui.painter().rect(toolbar,11.,Color32::from_rgb(251,252,255),Stroke::new(1.0_f32,Color32::from_rgb(222,228,239)),StrokeKind::Inside);
         let mut clicked=None;
-        for i in 0..5 {
-            let offset=if landscape {vec2(5.+i as f32*50.,5.)} else {vec2(5.,5.+i as f32*50.)};
+        for (slot, &i) in tools.iter().enumerate() {
+            let offset=if landscape {vec2(5.+slot as f32*50.,5.)} else {vec2(5.,5.+slot as f32*50.)};
             if tool(ui,Rect::from_min_size(toolbar.min+offset,vec2(44.,44.)),i,(i==0&&app.fullscreen)||(i==3&&app.companion.as_ref().is_some_and(|c|c.audio.muted.load(std::sync::atomic::Ordering::Relaxed)))){clicked=Some(i);}
         }
         if stop||clicked==Some(4){app.end_native_session(ctx);return;}
         match clicked {
             Some(0)=>{app.fullscreen=!app.fullscreen;ctx.send_viewport_cmd(ViewportCommand::Fullscreen(app.fullscreen));},
+            Some(1) if usb.is_some()=>app.capture(),
             Some(1)=>app.capture_native(),
             Some(3)=>{if let Some(c)=&app.companion{c.audio.toggle();}},
             Some(2)=>{app.mirror_rotation=(app.mirror_rotation+1)%4;sync_window(app,ctx);},

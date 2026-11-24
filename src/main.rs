@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MPL-2.0
 mod desktop;
-mod paths;
 mod companion;
 mod view;
 mod mirror;
+#[cfg(target_os = "linux")]
+mod usb_mirror;
 mod audio;
 mod pc_share;
 mod profile;
+mod paths;
 mod pairing;
 mod trust;
 use egui::{self, *};
@@ -40,13 +42,21 @@ fn run_with_input(program:&str,args:&[&str],input:Option<&str>)->Result<std::pro
 fn scan()->Result<Vec<Device>,String> { let o=run("adb", &["devices","-l"])?; if !o.status.success(){return Err("Device discovery unavailable. Check ADB permissions and USB access.".into())} Ok(parse_devices(&String::from_utf8_lossy(&o.stdout))) }
 fn parse_devices(s:&str)->Vec<Device> { s.lines().skip(1).filter_map(|l|{let p:Vec<_>=l.split_whitespace().collect();if p.len()<2{return None} Some(Device{serial:p[0].into(),state:p[1].into(),name:p.iter().find_map(|x|x.strip_prefix("model:")).unwrap_or(p[0]).replace('_'," "),wifi:p[0].contains(':')||p[0].contains("._tcp")})}).collect() }
 fn stamp()->u64 { std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis() as u64 }
-struct Relay {mirror_mode:bool,mirror_geometry:Option<([usize;2],u8)>,mirror_rotation:u8,menu_size:Vec2,menu_maximized:bool,fullscreen:bool,last_image:Option<std::sync::Arc<ColorImage>>, companion:Option<companion::Companion>, qr_install:bool,easy:bool, texture:Option<egui::TextureHandle>, settings:Settings, devices:Vec<Device>, selected:Option<String>, tx:mpsc::Sender<Event>, rx:mpsc::Receiver<Event>, scanning:bool,last_scan:Instant,page:usize, tab:usize, status:String, details:String, child:Option<Child>, recording:bool, started:Instant, dialog:bool, address:String,pair_address:String,code:String,help:bool, frame:u32, screenshot:Option<PathBuf>,shot_requested:bool, saved:bool, log:Option<PathBuf>, capture_files:Vec<PathBuf> }
+struct Relay {
+    #[cfg(target_os = "linux")]
+    usb_mirror: Option<usb_mirror::UsbMirror>,
+    mirror_pinned: bool,
+    mirror_mode:bool,mirror_geometry:Option<([usize;2],u8)>,mirror_rotation:u8,menu_size:Vec2,menu_maximized:bool,fullscreen:bool,last_image:Option<std::sync::Arc<ColorImage>>, companion:Option<companion::Companion>, qr_install:bool,easy:bool, texture:Option<egui::TextureHandle>, settings:Settings, devices:Vec<Device>, selected:Option<String>, tx:mpsc::Sender<Event>, rx:mpsc::Receiver<Event>, scanning:bool,last_scan:Instant,page:usize, tab:usize, status:String, details:String, child:Option<Child>, recording:bool, started:Instant, dialog:bool, address:String,pair_address:String,code:String,help:bool, frame:u32, screenshot:Option<PathBuf>,shot_requested:bool, saved:bool, log:Option<PathBuf>, capture_files:Vec<PathBuf> }
 impl Relay {
 fn new(cc:&desktop::CreationContext<'_>,screenshot:Option<PathBuf>)->Self {
  let mut style=(*cc.egui_ctx.style()).clone();style.visuals=Visuals::light();style.visuals.panel_fill=BG;style.visuals.window_fill=PANEL;style.visuals.override_text_color=Some(TEXT);style.spacing.button_padding=vec2(14.,10.);style.visuals.widgets.inactive.bg_fill=Color32::from_rgb(244,246,250);style.visuals.widgets.inactive.corner_radius=CornerRadius::same(7);style.visuals.selection.bg_fill=Color32::from_rgb(224,235,255);cc.egui_ctx.set_style(style);
  let mut fonts=FontDefinitions::default(); fonts.font_data.insert("interface".into(),FontData::from_static(include_bytes!("../assets/interface.ttf")).into());fonts.families.get_mut(&FontFamily::Proportional).unwrap().insert(0,"interface".into());cc.egui_ctx.set_fonts(fonts);
  let (tx,rx)=mpsc::channel();let settings=cc.storage.and_then(|s|s.get_string("settings")).and_then(|s|serde_json::from_str(&s).ok()).unwrap_or_default();
- let mut a=Self{mirror_mode:false,mirror_geometry:None,mirror_rotation:0,menu_size:vec2(1240.,850.),menu_maximized:false,fullscreen:false,last_image:None,qr_install:false,texture:None,companion:None,easy:std::env::args().any(|a|a=="--connect-phone"),settings,devices:vec![],selected:None,tx,rx,scanning:false,last_scan:Instant::now(),page:0,tab:2,status:"Ready when you are".into(),details:String::new(),child:None,recording:false,started:Instant::now(),dialog:false,address:String::new(),pair_address:String::new(),code:String::new(),help:false,frame:0,screenshot,shot_requested:false,saved:false,log:None,capture_files:vec![]};a.refresh();a
+ let mut a=Self{
+    #[cfg(target_os = "linux")]
+    usb_mirror: None,
+    mirror_pinned: false,
+    mirror_mode:false,mirror_geometry:None,mirror_rotation:0,menu_size:vec2(1240.,850.),menu_maximized:false,fullscreen:false,last_image:None,qr_install:false,texture:None,companion:None,easy:std::env::args().any(|a|a=="--connect-phone"),settings,devices:vec![],selected:None,tx,rx,scanning:false,last_scan:Instant::now(),page:0,tab:2,status:"Ready when you are".into(),details:String::new(),child:None,recording:false,started:Instant::now(),dialog:false,address:String::new(),pair_address:String::new(),code:String::new(),help:false,frame:0,screenshot,shot_requested:false,saved:false,log:None,capture_files:vec![]};a.refresh();a
 }
 fn apply_wireless_settings(&mut self){
  self.settings.device_name=profile::device_name(&self.settings.device_name);self.settings.wireless_profile=self.settings.wireless_profile.min(2);
@@ -57,28 +67,60 @@ fn apply_wireless_settings(&mut self){
 fn refresh(&mut self){if self.scanning{return}self.scanning=true;self.last_scan=Instant::now();let tx=self.tx.clone();std::thread::spawn(move||{let _=tx.send(Event::Scan(scan()));});}
 fn files(&mut self) { self.capture_files=std::fs::read_dir(&self.settings.folder).into_iter().flatten().flatten().map(|e|e.path()).filter(|p|p.extension().is_some_and(|e|e=="png"||e=="mkv")).collect();self.capture_files.sort();self.capture_files.reverse(); }
 fn chosen(&self)->Option<&Device>{ self.devices.iter().find(|d|Some(&d.serial)==self.selected.as_ref()&&d.state=="device") }
-fn start(&mut self,record:bool) {if self.child.is_some(){return}let Some(d)=self.chosen().cloned() else {self.status="Connect and authorize a device first".into();return};
- let mut args=vec!["--serial".into(),d.serial,"--window-title".into(),"Relay · Android mirror".into(),format!("--max-size={}",self.settings.size),format!("--max-fps={}",self.settings.fps),format!("--video-bit-rate={}M",self.settings.bitrate)];
+fn start(&mut self,ctx:&Context,record:bool) {if self.child.is_some(){return}let Some(d)=self.chosen().cloned() else {self.status="Connect and authorize a device first".into();return};
+ let title=format!("Relay · {} ({})",d.name,stamp());
+ let _=ctx;
+ let client=std::env::current_exe().ok().and_then(|exe|exe.parent().map(|dir|dir.join(format!("relay-scrcpy{}",std::env::consts::EXE_SUFFIX))))
+     .filter(|path|path.is_file()).unwrap_or_else(||PathBuf::from("scrcpy"));
+ let mut args=vec!["--serial".into(),d.serial,"--window-title".into(),title,format!("--max-size={}",self.settings.size),format!("--max-fps={}",self.settings.fps),format!("--video-bit-rate={}M",self.settings.bitrate)];
  if !self.settings.audio{args.push("--no-audio".into());}if !self.settings.control{args.push("--no-control".into());}if self.settings.fullscreen{args.push("--fullscreen".into());}
- let help=Command::new("scrcpy").arg("--help").output().ok().map(|x|String::from_utf8_lossy(&x.stdout).to_string()).unwrap_or_default();if help.contains("--hwdec"){args.push(format!("--hwdec={}",if self.settings.hardware{"auto"}else{"disabled"}));}
+ let help=Command::new(&client).arg("--help").output().ok().map(|x|String::from_utf8_lossy(&x.stdout).to_string()).unwrap_or_default();if help.contains("--hwdec"){args.push(format!("--hwdec={}",if self.settings.hardware{"auto"}else{"disabled"}));}
  if let Err(e)=std::fs::create_dir_all(&self.settings.folder){self.status=format!("Cannot create capture folder: {e}");return}
  if record {args.push(format!("--record={}/Recording-{}.mkv",self.settings.folder,stamp()));}
  let log=PathBuf::from(&self.settings.folder).join("session.log");let Ok(file)=std::fs::File::create(&log) else {self.status="Cannot write the capture folder".into();return};let Ok(err)=file.try_clone() else{return};
- match Command::new("scrcpy").args(&args).stdout(Stdio::from(file)).stderr(Stdio::from(err)).spawn(){Ok(c)=>{self.child=Some(c);self.log=Some(log);self.recording=record;self.started=Instant::now();self.status="Opening the native mirror window…".into()},Err(e)=>self.status=format!("Install scrcpy to start mirroring. {e}")}
+ let mut command=Command::new(&client);
+ command.env("RELAY_CAPTURE_DIR",&self.settings.folder);
+ match command.args(&args).stdout(Stdio::from(file)).stderr(Stdio::from(err)).spawn(){Ok(c)=>{
+     self.child=Some(c);self.log=Some(log);self.recording=record;self.started=Instant::now();self.status="Opening the native mirror window…".into()},Err(e)=>self.status=format!("Install scrcpy to start mirroring. {e}")}
 }
 fn stop(&mut self){if let Some(c)=&self.child {let _=Command::new("kill").args(["-INT",&c.id().to_string()]).status();self.status="Finishing your session…".into();}}
-fn end_native_session(&mut self,ctx:&Context){self.companion=None;self.texture=None;self.last_image=None;self.easy=true;self.status="Mirroring ended".into();mirror::sync_window(self,ctx);}
+fn usb_source(&self)->Option<[usize; 2]> {
+ #[cfg(target_os = "linux")]
+ { self.usb_mirror.as_ref().and_then(usb_mirror::UsbMirror::source) }
+ #[cfg(not(target_os = "linux"))]
+ { None }
+}
+fn end_native_session(&mut self,ctx:&Context){
+ if self.usb_source().is_some() {self.stop();return;}
+ self.companion=None;self.texture=None;self.last_image=None;self.easy=true;self.status="Mirroring ended".into();mirror::sync_window(self,ctx);}
 fn capture_native(&mut self){
  let Some(frame)=self.last_image.clone() else{return};let folder=self.settings.folder.clone();let tx=self.tx.clone();
  std::thread::spawn(move||{let result=(||->Result<String,String>{std::fs::create_dir_all(&folder).map_err(|e|e.to_string())?;let path=PathBuf::from(&folder).join(format!("Screenshot-{}.png",stamp()));let bytes:Vec<u8>=frame.pixels.iter().flat_map(|c|c.to_array()).collect();image::save_buffer(path,&bytes,frame.width()as u32,frame.height()as u32,image::ColorType::Rgba8).map_err(|e|e.to_string())?;Ok("Screenshot saved to My captures".into())})();let _=tx.send(Event::Message(result.unwrap_or_else(|e|e)));});
 }
 fn capture(&mut self){let Some(d)=self.chosen().cloned() else{self.status="Connect a device to take a screenshot".into();return};let tx=self.tx.clone();let folder=self.settings.folder.clone();std::thread::spawn(move||{let result=(||{std::fs::create_dir_all(&folder).map_err(|e|e.to_string())?;let o=run("adb", &["-s",&d.serial,"exec-out","screencap","-p"])?;if !o.status.success()||!o.stdout.starts_with(b"\x89PNG"){return Err("Screenshot failed. Unlock and authorize the device.".into())}let path=format!("{folder}/Screenshot-{}.png",stamp());std::fs::write(&path,o.stdout).map_err(|e|e.to_string())?;Ok("Screenshot saved to your capture folder".into())})();let _=tx.send(Event::Message(result.unwrap_or_else(|e|e)));});}
 fn connect(&mut self,pair:bool){let addr=if pair{self.pair_address.trim()}else{self.address.trim()}.to_string();if addr.parse::<std::net::SocketAddr>().is_err(){self.status="Enter a valid IP address and port, for example 192.168.1.42:37123".into();return}if pair&&(self.code.len()!=6||!self.code.chars().all(|c|c.is_ascii_digit())){self.status="Enter the six-digit pairing code shown on your phone".into();return}let code=self.code.clone();self.code.clear();let tx=self.tx.clone();self.status="Connecting to your phone…".into();std::thread::spawn(move||{let args=if pair{vec!["pair",addr.as_str()]}else{vec!["connect",addr.as_str()]};let msg=match run_with_input("adb",&args,if pair{Some(&code)}else{None}){Ok(o)=>format!("{}{}",String::from_utf8_lossy(&o.stdout),String::from_utf8_lossy(&o.stderr)),Err(e)=>e};let msg=if pair&&!code.is_empty(){msg.replace(&code,"[redacted]")}else{msg};let _=tx.send(Event::Message(msg));let _=tx.send(Event::Scan(scan()));});}
-fn poll(&mut self){while let Ok(e)=self.rx.try_recv(){match e {Event::Scan(r)=>{self.scanning=false;match r {Ok(d)=>{self.details=String::new();self.devices=d;if !self.devices.iter().any(|d|Some(&d.serial)==self.selected.as_ref()){self.selected=self.devices.iter().find(|d|d.state=="device").map(|d|d.serial.clone());}},Err(e)=>self.details=e}},Event::Message(s)=>{self.status=s;self.files();}}}if self.last_scan.elapsed()>Duration::from_secs(6){self.refresh();}if let Some(c)=&mut self.child {if let Ok(Some(s))=c.try_wait(){self.child=None;self.recording=false;if s.success(){self.status="Session ended. Your captures are ready.".into()}else{self.status="Mirror stopped. Check connection and session details.".into();self.details=self.log.as_ref().and_then(|p|std::fs::read_to_string(p).ok()).unwrap_or_default();}self.files();}}}
+fn poll(&mut self){while let Ok(e)=self.rx.try_recv(){match e {Event::Scan(r)=>{self.scanning=false;match r {Ok(d)=>{self.details=String::new();self.devices=d;if !self.devices.iter().any(|d|Some(&d.serial)==self.selected.as_ref()){self.selected=self.devices.iter().find(|d|d.state=="device").map(|d|d.serial.clone());}},Err(e)=>self.details=e}},Event::Message(s)=>{self.status=s;self.files();}}}if self.last_scan.elapsed()>Duration::from_secs(6){self.refresh();}if let Some(c)=&mut self.child {if let Ok(Some(s))=c.try_wait(){self.child=None;
+ #[cfg(target_os = "linux")]
+ {self.usb_mirror=None;}
+ self.recording=false;if s.success(){self.status="Session ended. Your captures are ready.".into()}else{self.status="Mirror stopped. Check connection and session details.".into();self.details=self.log.as_ref().and_then(|p|std::fs::read_to_string(p).ok()).unwrap_or_default();}self.files();}}}
 }
 impl desktop::App for Relay {
+fn minimum_frame_interval(&self)->Duration {
+    // scrcpy presents the video on its own surface. Relay only draws its controls.
+    if self.usb_source().is_some() { Duration::from_millis(50) } else { Duration::ZERO }
+}
 fn save(&mut self,storage:&mut dyn desktop::Storage){if let Ok(s)=serde_json::to_string(&self.settings){storage.set_string("settings",s)}}
 fn update(&mut self,ctx:&Context,_frame:&mut desktop::Frame){self.poll();
+ #[cfg(target_os = "linux")]
+ if let Some(usb)=&mut self.usb_mirror {
+     usb.try_attach();
+     if usb.expired() {
+         self.usb_mirror=None;
+         self.status="Mirroring in the scrcpy window".into();
+     } else if usb.source().is_none() {
+         ctx.request_repaint_after(Duration::from_millis(100));
+     }
+ }
  if let Some(c)=&self.companion{if !c.live.load(std::sync::atomic::Ordering::Relaxed){self.texture=None;self.last_image=None;c.frame.lock().unwrap().take();}else if let Some(frame)=c.frame.lock().unwrap().take(){self.last_image=Some(frame.clone());if let Some(t)=&mut self.texture{t.set(frame,TextureOptions::LINEAR);}else{self.texture=Some(ctx.load_texture("phone-video",frame,TextureOptions::LINEAR));}}}
  if ctx.input(|i|i.key_pressed(Key::F11)){self.fullscreen=!self.fullscreen;ctx.send_viewport_cmd(ViewportCommand::Fullscreen(self.fullscreen));}
  if self.fullscreen&&ctx.input(|i|i.key_pressed(Key::Escape)){self.fullscreen=false;ctx.send_viewport_cmd(ViewportCommand::Fullscreen(false));}

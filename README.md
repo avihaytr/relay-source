@@ -8,6 +8,8 @@ Relay is an experimental Linux desktop app and Android companion for local scree
 
 **First public pre-release: [v0.1.0-alpha.1](https://github.com/avihaytr/relay-source/releases/tag/v0.1.0-alpha.1).** It is experimental, not stable. Original approved code is licensed under MPL-2.0. The 13 identified icon files have separate [MIT/Expat copyright permission](ARTWORK_LICENSE.md), version 1.0, and [product-identity policy](BRANDING.md) v1.1, both adopted effective 2026-11-19. These grants do not assert exclusive ownership or third-party clearance. See [licensing scope](LICENSING.md).
 
+**Linux desktop update:** [v0.1.0-alpha.2](https://github.com/avihaytr/relay-source/releases/tag/v0.1.0-alpha.2) adds a Relay-styled USB viewer for Fedora 43 x86_64. The [alpha.1 Android companion](https://github.com/avihaytr/relay-source/releases/tag/v0.1.0-alpha.1) works with this desktop preview.
+
 ## Screenshots
 
 Real Relay captures from Fedora Linux and Android, using public-safe device labels.

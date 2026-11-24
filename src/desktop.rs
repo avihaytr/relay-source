@@ -8,7 +8,9 @@ pub trait Storage {fn get_string(&self,key:&str)->Option<String>;fn set_string(&
 impl Storage for DiskStorage {fn get_string(&self,key:&str)->Option<String>{self.0.get(key).cloned()}fn set_string(&mut self,key:&str,value:String){self.0.insert(key.into(),value);}}
 pub struct CreationContext<'a>{pub egui_ctx:egui::Context,pub storage:Option<&'a dyn Storage>}
 pub struct Frame;
-pub trait App {fn update(&mut self,ctx:&egui::Context,frame:&mut Frame);fn save(&mut self,_s:&mut dyn Storage){}fn on_exit(&mut self,_gl:Option<&()>){}fn close_requested(&mut self,_ctx:&egui::Context)->bool{true}}
+pub trait App {fn update(&mut self,ctx:&egui::Context,frame:&mut Frame);fn save(&mut self,_s:&mut dyn Storage){}fn on_exit(&mut self,_gl:Option<&()>){}fn close_requested(&mut self,_ctx:&egui::Context)->bool{true}
+    fn minimum_frame_interval(&self)->Duration { Duration::ZERO }
+}
 #[derive(Default)]pub struct NativeOptions {
  pub viewport:egui::ViewportBuilder,
  pub background_render:bool,
@@ -16,10 +18,22 @@ pub trait App {fn update(&mut self,ctx:&egui::Context,frame:&mut Frame);fn save(
 }
 type Factory = Box<dyn FnOnce(&CreationContext<'_>)->Result<Box<dyn App>>>;
 struct Graphics {state:egui_winit::State,renderer:egui_wgpu::Renderer,surface:wgpu::Surface<'static>,queue:wgpu::Queue,device:wgpu::Device,config:wgpu::SurfaceConfiguration,window:Arc<Window>}
-struct Runner{options:NativeOptions,factory:Option<Factory>,app:Option<Box<dyn App>>,graphics:Option<Graphics>,ctx:egui::Context,storage:DiskStorage,rx:egui_wgpu::capture::CaptureReceiver,tx:egui_wgpu::capture::CaptureSender,next:Instant,closed:bool}
+struct Runner{options:NativeOptions,factory:Option<Factory>,app:Option<Box<dyn App>>,graphics:Option<Graphics>,ctx:egui::Context,storage:DiskStorage,rx:egui_wgpu::capture::CaptureReceiver,tx:egui_wgpu::capture::CaptureSender,next:Instant,last_draw:Option<Instant>,closed:bool}
 impl Runner {
  fn close(&mut self,event_loop:&ActiveEventLoop){if !self.closed{if let Some(a)=&mut self.app{a.save(&mut self.storage);a.on_exit(None);}if let Ok(s)=serde_json::to_string(&self.storage.0){let _=crate::paths::save_settings(s.as_bytes());}self.closed=true;self.ctx.set_request_repaint_callback(|_|{});self.graphics.take();}event_loop.exit();}
- fn draw(&mut self,event_loop:&ActiveEventLoop){self.next=Instant::now()+Duration::from_millis(16);let Some(g)=&mut self.graphics else{return};let size=g.window.inner_size();if size.width==0||size.height==0{return}if g.config.width!=size.width||g.config.height!=size.height{g.config.width=size.width;g.config.height=size.height;g.surface.configure(&g.device,&g.config);}
+ fn draw(&mut self,event_loop:&ActiveEventLoop){
+ let now=Instant::now();
+ let minimum_interval=self.app.as_ref().map_or(Duration::ZERO,|app|app.minimum_frame_interval());
+ if let Some(last_draw)=self.last_draw {
+     let earliest=last_draw+minimum_interval;
+     if now<earliest {
+         self.next=earliest;
+         event_loop.set_control_flow(ControlFlow::WaitUntil(earliest));
+         return;
+     }
+ }
+ self.last_draw=Some(now);
+ self.next=now+minimum_interval.max(Duration::from_millis(16));let Some(g)=&mut self.graphics else{return};let size=g.window.inner_size();if size.width==0||size.height==0{return}if g.config.width!=size.width||g.config.height!=size.height{g.config.width=size.width;g.config.height=size.height;g.surface.configure(&g.device,&g.config);}
  // Acquire before consuming screenshot commands, so a transient surface error cannot lose one.
  let frame=match g.surface.get_current_texture(){Ok(f)=>f,Err(_)=>{g.surface.configure(&g.device,&g.config);return}};
  let mut input=g.state.take_egui_input(&g.window);while let Ok((id,data,image))=self.rx.try_recv(){for user_data in data{input.events.push(egui::Event::Screenshot{viewport_id:id,user_data,image:Arc::new(image.clone())});}}
@@ -32,6 +46,11 @@ impl Runner {
  egui::ViewportCommand::Minimized(value)=>g.window.set_minimized(*value),
  egui::ViewportCommand::Maximized(value)=>g.window.set_maximized(*value),
  egui::ViewportCommand::Focus=>g.window.focus_window(),
+ egui::ViewportCommand::WindowLevel(level)=>g.window.set_window_level(match level{
+     egui::WindowLevel::Normal=>winit::window::WindowLevel::Normal,
+     egui::WindowLevel::AlwaysOnBottom=>winit::window::WindowLevel::AlwaysOnBottom,
+     egui::WindowLevel::AlwaysOnTop=>winit::window::WindowLevel::AlwaysOnTop,
+ }),
  egui::ViewportCommand::Fullscreen(enabled)=>g.window.set_fullscreen(if *enabled{Some(winit::window::Fullscreen::Borderless(None))}else{None}),_=>{}}}}
  if close{drop(frame);self.close(event_loop);return}
  let mut capture=if screenshot.is_empty(){None}else{Some(egui_wgpu::capture::CaptureState::new(&g.device,&frame.texture))};
@@ -43,7 +62,7 @@ impl Runner {
  // Poll after presenting; never wait indefinitely for a covered window's presentation.
  let _=g.device.poll(wgpu::PollType::Poll);
  for id in &output.textures_delta.free{g.renderer.free_texture(id);}
- self.next=Instant::now()+delay.max(Duration::from_millis(16));event_loop.set_control_flow(ControlFlow::WaitUntil(self.next));
+ self.next=Instant::now()+delay.max(minimum_interval).max(Duration::from_millis(16));event_loop.set_control_flow(ControlFlow::WaitUntil(self.next));
  }
 }
 impl ApplicationHandler for Runner {
@@ -52,6 +71,20 @@ impl ApplicationHandler for Runner {
  let attrs=attrs.with_window_level(match v.window_level.unwrap_or(egui::WindowLevel::Normal){egui::WindowLevel::AlwaysOnBottom=>winit::window::WindowLevel::AlwaysOnBottom,egui::WindowLevel::AlwaysOnTop=>winit::window::WindowLevel::AlwaysOnTop,egui::WindowLevel::Normal=>winit::window::WindowLevel::Normal});
  #[cfg(target_os="linux")] let attrs={use winit::platform::wayland::WindowAttributesExtWayland;attrs.with_name("relay","Relay")};
  let window=Arc::new(event_loop.create_window(attrs).expect("Create desktop window"));
+ #[cfg(target_os="linux")]
+ {
+     use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
+     if let Ok(handle) = window.window_handle() {
+         let xid = match handle.as_raw() {
+             RawWindowHandle::Xlib(window) => Some(window.window as u32),
+             RawWindowHandle::Xcb(window) => Some(window.window.get()),
+             _ => None,
+         };
+         if let Some(xid) = xid {
+             self.ctx.data_mut(|data| data.insert_temp(egui::Id::new(crate::usb_mirror::HOST_WINDOW), xid));
+         }
+     }
+ }
  let instance=wgpu::Instance::new(&wgpu::InstanceDescriptor {backends: if cfg!(target_os="linux"){wgpu::Backends::VULKAN}else{wgpu::Backends::all()},..Default::default()});let surface=instance.create_surface(window.clone()).expect("Create graphics surface");let adapter=pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions{compatible_surface:Some(&surface),power_preference:wgpu::PowerPreference::LowPower,..Default::default()})).expect("Find graphics adapter");let(device,queue)=pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor{label:Some("Relay"),..Default::default()})).expect("Create graphics device");let size=window.inner_size();let mut config=surface.get_default_config(&adapter,size.width,size.height).unwrap();let caps=surface.get_capabilities(&adapter);config.format=caps.formats.iter().copied().find(|f|matches!(f,wgpu::TextureFormat::Bgra8Unorm|wgpu::TextureFormat::Rgba8Unorm)).unwrap_or(config.format);config.alpha_mode=caps.alpha_modes.iter().copied().find(|m|matches!(m,wgpu::CompositeAlphaMode::PreMultiplied)).or_else(||caps.alpha_modes.iter().copied().find(|m|matches!(m,wgpu::CompositeAlphaMode::PostMultiplied))).unwrap_or(config.alpha_mode);config.desired_maximum_frame_latency=1;if caps.present_modes.contains(&wgpu::PresentMode::Mailbox){config.present_mode=wgpu::PresentMode::Mailbox;}surface.configure(&device,&config);
  let state=egui_winit::State::new(self.ctx.clone(),egui::ViewportId::ROOT,&window,Some(window.scale_factor() as f32),None,None);let renderer=egui_wgpu::Renderer::new(&device,config.format,egui_wgpu::RendererOptions::default());self.graphics=Some(Graphics{window,surface,device,queue,config,renderer,state});let cc=CreationContext{egui_ctx:self.ctx.clone(),storage:Some(&self.storage)};self.app=Some(self.factory.take().unwrap()(&cc).expect("Create Relay"));self.graphics.as_ref().unwrap().window.request_redraw();
  }
@@ -61,12 +94,23 @@ impl ApplicationHandler for Runner {
   // Wayland can withhold RedrawRequested for inactive/covered windows. Screenshot
   // checks must advance independently of compositor redraw and focus events.
   if self.options.background_render {self.draw(event_loop);}
-  else if let Some(g)=&self.graphics{g.window.request_redraw();}
+  else if let Some(g)=&self.graphics{
+      // Give the window system time to deliver its redraw after requesting it.
+      self.next=Instant::now()+Duration::from_millis(16);
+      g.window.request_redraw();
+  }
  }
  event_loop.set_control_flow(ControlFlow::WaitUntil(self.next));
  }
 }
-pub fn run_native(_name:&str,mut options:NativeOptions,factory:Factory)->Result {let mut builder=EventLoop::builder();if let Some(configure)=options.event_loop_builder.take(){configure(&mut builder);}let event_loop=builder.build()?;let storage=std::fs::read_to_string(crate::paths::settings_file()).ok().and_then(|s|serde_json::from_str(&s).ok()).map(DiskStorage).unwrap_or_default();let(tx,rx)=egui_wgpu::capture::capture_channel();let mut runner=Runner{options,factory:Some(factory),app:None,graphics:None,ctx:egui::Context::default(),storage,rx,tx,next:Instant::now(),closed:false};let proxy=event_loop.create_proxy();runner.ctx.set_request_repaint_callback(move|info|{if info.delay.is_zero(){let _=proxy.send_event(());}});event_loop.run_app(&mut runner)?;Ok(())}
+pub fn run_native(_name:&str,mut options:NativeOptions,factory:Factory)->Result {let mut builder=EventLoop::builder();
+ #[cfg(target_os="linux")]
+ if !options.background_render && x11rb::connect(None).is_ok() {
+     use winit::platform::x11::EventLoopBuilderExtX11;
+     // Wayland has no standard always-on-top or foreign child-window API.
+     builder.with_x11();
+ }
+ if let Some(configure)=options.event_loop_builder.take(){configure(&mut builder);}let event_loop=builder.build()?;let storage=std::fs::read_to_string(crate::paths::settings_file()).ok().and_then(|s|serde_json::from_str(&s).ok()).map(DiskStorage).unwrap_or_default();let(tx,rx)=egui_wgpu::capture::capture_channel();let mut runner=Runner{options,factory:Some(factory),app:None,graphics:None,ctx:egui::Context::default(),storage,rx,tx,next:Instant::now(),last_draw:None,closed:false};let proxy=event_loop.create_proxy();runner.ctx.set_request_repaint_callback(move|info|{if info.delay.is_zero(){let _=proxy.send_event(());}});event_loop.run_app(&mut runner)?;Ok(())}
 
 /// Deterministic GPU preview when a CI environment has no desktop connection.
 /// Normal --screenshot always uses the real window above.

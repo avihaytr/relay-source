@@ -107,15 +107,16 @@ pub fn render(app: &mut Relay, ctx: &Context) {
         let body=Rect::from_min_max(pos2(28.,102.),pos2(w-28.,h-62.));
         match app.page {0=>mirror(app,ctx,ui,body),1=>captures(app,ui,body),_=>settings(app,ui,body)}
         ui.painter().hline(0.0..=w,h-42.,Stroke::new(1.0_f32,BORDER));
-        let status=app.companion.as_ref().map(|c|c.status.lock().unwrap().clone()).unwrap_or_else(||app.status.clone());
+        let wireless=app.tab==2;
+        let status=if app.page==0 && !wireless {app.status.clone()} else {app.companion.as_ref().map(|c|c.status.lock().unwrap().clone()).unwrap_or_else(||app.status.clone())};
         let live=app.texture.is_some()||app.child.is_some();
         ui.painter().circle_filled(pos2(34.,h-21.),3.,if live{Color32::from_rgb(36,173,128)}else{BLUE});
         label(ui,pos2(46.,h-29.),status.chars().take(128).collect::<String>(),11.,SUB);
-        label(ui,pos2(w-148.,h-29.),"Local Wi-Fi connection",10.,SUB);
+        label(ui,pos2(w-148.,h-29.),if wireless {"Local Wi-Fi connection"} else {"USB / advanced"},10.,SUB);
     });
 }
 
-fn mirror(app: &mut Relay,_ctx: &Context,ui: &mut Ui,body: Rect) {
+fn mirror(app: &mut Relay,ctx: &Context,ui: &mut Ui,body: Rect) {
 
     let left_width=(body.width()*0.6).min(body.width()-350.);
     let left=Rect::from_min_max(body.min,pos2(body.left()+left_width-20.,body.bottom()));
@@ -138,18 +139,8 @@ fn mirror(app: &mut Relay,_ctx: &Context,ui: &mut Ui,body: Rect) {
         let r=Rect::from_center_size(pos2(left.center().x,y+91.),vec2(250.,44.));
         if action(ui,r,&if ready{format!("Relay · {name}")}else{"Enable wireless connection".into()},!ready){app.easy=true;}
     } else {
-        let mut child=ui.new_child(UiBuilder::new().max_rect(Rect::from_min_max(left.min+vec2(28.,165.),left.max-vec2(28.,24.))));
-        child.heading("Connect your Android device");child.add_space(12.);
-        child.label("Enable USB debugging, connect a data cable and approve the authorization on your phone.");child.add_space(20.);
-        if child.button("Refresh devices").clicked(){app.refresh();}
-        child.add_space(12.);let devices=app.devices.clone();
-        if devices.is_empty(){child.label("No authorized devices found yet.");}
-        for d in devices{if child.selectable_label(app.selected.as_ref()==Some(&d.serial),format!("{}  ·  {}  ·  {}",d.name,if d.wifi{"Wi-Fi"}else{"USB"},d.state)).clicked(){app.selected=Some(d.serial);}}
-        child.add_space(20.);
-        if child.add(Button::new("Start mirroring").fill(BLUE)).clicked(){app.start(false);}
-        if child.button("Advanced Wi-Fi pairing").clicked(){app.dialog=true;}
-        child.add_space(16.);child.label("Audio, recording, screenshots and remote control use the scrcpy mirror window.");
-        if app.child.is_some(){if child.button("Stop scrcpy mirror").clicked(){app.stop();}if child.button("Take screenshot").clicked(){app.capture();}}
+        usb_setup(app, ctx, ui, left, right);
+        return;
     }
     label(ui,right.min+vec2(26.,27.),"Connect your phone",20.,INK);
     label(ui,right.min+vec2(26.,59.),"Keep both devices on the same Wi-Fi.",12.,SUB);
@@ -172,14 +163,80 @@ fn mirror(app: &mut Relay,_ctx: &Context,ui: &mut Ui,body: Rect) {
         center(ui,pos2(right.center().x,right.center().y-30.),"Wireless connection is off",15.,INK);
         if action(ui,Rect::from_center_size(right.center()+vec2(0.,30.),vec2(200.,42.)),"Enable connection",true){app.easy=true;}
     }
-    let steps_y=right.bottom()-104.;
-    ui.painter().hline(right.left()+25.0..=right.right()-25.,steps_y-18.,Stroke::new(1.0_f32,BORDER));
-    for (i,line) in ["Open Relay on both devices","Pair by QR or PIN; compare and approve","Choose a direction; allow screen capture"].iter().enumerate(){
-        let p=pos2(right.left()+27.,steps_y+i as f32*27.);
+    connection_steps(ui, right, [
+        "Open Relay on both devices",
+        "Pair by QR or PIN; compare and approve",
+        "Choose a direction; allow screen capture",
+    ]);
+}
+
+fn connection_steps(ui: &Ui, panel: Rect, steps: [&str; 3]) {
+    let y = panel.bottom() - 104.;
+    ui.painter().hline(panel.left()+25.0..=panel.right()-25.,y-18.,Stroke::new(1.0_f32,BORDER));
+    for (i,line) in steps.into_iter().enumerate() {
+        let p=pos2(panel.left()+27.,y+i as f32*27.);
         ui.painter().circle_filled(p+vec2(8.,8.),9.,SOFT);
-        center(ui,p+vec2(8.,0.),&format!("{}",i+1),10.,BLUE);
-        label(ui,p+vec2(26.,0.),*line,11.,SUB);
+        center(ui,p+vec2(8.,0.),&(i+1).to_string(),10.,BLUE);
+        label(ui,p+vec2(26.,0.),line,11.,SUB);
     }
+}
+
+fn usb_setup(app: &mut Relay, ctx: &Context, ui: &mut Ui, left: Rect, right: Rect) {
+    label(ui,left.min+vec2(28.,168.),"Android devices",20.,INK);
+    if action(ui, Rect::from_min_size(pos2(left.right()-146.,left.top()+163.),vec2(118.,36.)),
+        if app.scanning {"Scanning…"} else {"Refresh"}, false) {
+        app.refresh();
+    }
+    let list = Rect::from_min_max(left.min+vec2(28.,216.), left.max-vec2(28.,118.));
+    let mut rows=ui.new_child(UiBuilder::new().max_rect(list));
+    rows.set_clip_rect(list);
+    if app.devices.is_empty() {
+        center(&rows,pos2(list.center().x,list.center().y-22.),
+            if app.scanning {"Looking for Android devices"} else {"No Android devices found"},19.,INK);
+        center(&rows,pos2(list.center().x,list.center().y+11.),
+            "Connect a data cable and allow USB debugging on Android.",12.,SUB);
+    } else {
+        ScrollArea::vertical().id_salt("usb-devices").max_height(list.height()).show(&mut rows, |ui| {
+            for device in &app.devices {
+                let selected=app.selected.as_ref()==Some(&device.serial);
+                let name=format!("{}  ·  {}  ·  {}",device.name,
+                    if device.wifi {"Wi-Fi"} else {"USB"},
+                    if device.state=="device" {"Ready"} else {&device.state});
+                if ui.add_sized([ui.available_width(),42.],Button::new(RichText::new(name)
+                    .color(if selected {BLUE} else {INK}))
+                    .fill(if selected {SOFT} else {Color32::WHITE})
+                    .stroke(Stroke::new(1.0_f32,BORDER)).corner_radius(8.)).clicked() {
+                    app.selected=Some(device.serial.clone());
+                }
+            }
+        });
+    }
+    let controls=left.bottom()-94.;
+    let ready=app.chosen().is_some();
+    let active=app.child.is_some();
+    let primary=Rect::from_center_size(pos2(left.center().x,controls+22.),vec2(218.,44.));
+    let title=if active {"Stop mirroring"} else {"Start mirroring"};
+    if ui.put(primary,Button::new(RichText::new(title).size(14.).color(Color32::WHITE))
+        .fill(if active || ready {BLUE} else {SUB}).sense(if active || ready {Sense::click()} else {Sense::hover()})
+        .corner_radius(8.)).clicked() {
+        if active {app.stop();} else {app.start(ctx,false);}
+    }
+    if active && action(ui,Rect::from_center_size(pos2(left.center().x,controls+67.),vec2(218.,32.)),
+        "Take screenshot",false) {
+        app.capture();
+    }
+    label(ui,right.min+vec2(26.,27.),"Connect with scrcpy",20.,INK);
+    label(ui,right.min+vec2(26.,59.),"Mirror and control your Android device.",12.,SUB);
+    illustration(ui,Rect::from_min_max(right.min+vec2(20.,100.),right.max-vec2(20.,166.)));
+    if action(ui,Rect::from_center_size(pos2(right.center().x,right.bottom()-145.),vec2(244.,40.)),
+        "Advanced Wi-Fi pairing",false) {
+        app.dialog=true;
+    }
+    connection_steps(ui,right,[
+        "Enable USB debugging in Developer options",
+        "Connect with a data cable and allow debugging",
+        "Select your device and start mirroring",
+    ]);
 }
 
 
